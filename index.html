@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>村人ピアノ</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      /* 
+      background: radial-gradient(circle at center, #ffffff 0%, #e4e7ec 100%);
+      */
+      background: url(https://img.game8.jp/7454960/1308672d9c0d8bffad3f8e4b43d393b9.png/show) repeat center center fixed;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: #4a5058;
+      padding: 20px;
+    }
+
+    /* ホワイトグランドピアノの筐体（光沢のある鏡面ホワイト） */
+    .piano-body {
+      background: linear-gradient(180deg, #ffffff 0%, #f1f3f6 100%);
+      padding: 35px 28px 25px 28px;
+      border-radius: 14px;
+      box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.12),
+        0 4px 12px rgba(0, 0, 0, 0.06),
+        inset 0 2px 3px #ffffff;
+      border: 1px solid #dcdfe4;
+      border-top: 5px solid #d4af37;
+      /* シャンパンゴールドのアクセントライン */
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .brand-logo {
+      text-align: center;
+      font-family: 'Georgia', serif;
+      font-size: 18px;
+      letter-spacing: 5px;
+      color: #b5922b;
+      margin-bottom: 18px;
+      text-shadow: 0 1px 0 #ffffff;
+    }
+
+    /* 鍵盤エリア（赤いフェルト付き） */
+    .keys-container {
+      display: flex;
+      position: relative;
+      background: #2b2b2b;
+      padding-top: 6px;
+      border-top: 4px solid #b81d24;
+      /* 白いボディに映える鮮やかな赤フェルト */
+      border-radius: 4px;
+      box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.1);
+      width: max-content;
+    }
+
+    /* 白鍵（全15鍵：低いシ〜高いシ） */
+    .white-key {
+      width: 54px;
+      height: 240px;
+      background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 85%, #eef0f3 100%);
+      border: 1px solid #cfd4dc;
+      border-bottom: 6px solid #d5dae2;
+      border-radius: 0 0 6px 6px;
+      margin: 0 1px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12);
+      transition: transform 0.04s ease, background 0.04s ease;
+    }
+
+    .white-key:hover {
+      background: linear-gradient(180deg, #ffffff 0%, #fcfcfd 100%);
+    }
+
+    .white-key.active {
+      transform: translateY(4px);
+      background: linear-gradient(180deg, #e6e9ef 0%, #f2f4f7 90%, #dfe3ea 100%);
+      border-bottom: 2px solid #b8bec8;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 黒鍵（全11鍵：低いシ♭〜高いラ＃） */
+    .black-key {
+      width: 34px;
+      height: 150px;
+      background: linear-gradient(180deg, #42464d 0%, #1d1f23 85%, #0f1012 100%);
+      border: 1px solid #111;
+      border-bottom: 8px solid #2e3136;
+      border-radius: 0 0 4px 4px;
+      position: absolute;
+      top: 6px;
+      z-index: 2;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 10px;
+      box-shadow: 2px 5px 7px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+      transition: transform 0.04s ease, background 0.04s ease;
+    }
+
+    .black-key:hover {
+      background: linear-gradient(180deg, #4e535c 0%, #25282d 85%, #15171a 100%);
+    }
+
+    .black-key.active {
+      transform: translateY(4px);
+      border-bottom: 3px solid #181a1d;
+      box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    /* 音名・キーガイド表示 */
+    .note-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #6c737f;
+      margin-bottom: 3px;
+    }
+
+    .black-key .note-label {
+      font-size: 10px;
+      color: #d0d5dd;
+    }
+
+    .key-hint {
+      font-size: 10px;
+      color: #7a828e;
+      background: #f1f3f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #dcdfe4;
+    }
+
+    .black-key .key-hint {
+      font-size: 9px;
+      color: #e4e7ec;
+      background: #2b2e33;
+      border-color: #474c54;
+    }
+
+    /* 黒鍵の配置（白鍵1つ56px幅基準） */
+    .bk-0 {
+      left: -17px;
+    }
+
+    .bk-1 {
+      left: 95px;
+    }
+
+    .bk-2 {
+      left: 151px;
+    }
+
+    .bk-3 {
+      left: 263px;
+    }
+
+    .bk-4 {
+      left: 319px;
+    }
+
+    .bk-5 {
+      left: 375px;
+    }
+
+    .bk-6 {
+      left: 487px;
+    }
+
+    .bk-7 {
+      left: 543px;
+    }
+
+    .bk-8 {
+      left: 655px;
+    }
+
+    .bk-9 {
+      left: 711px;
+    }
+
+    .bk-10 {
+      left: 767px;
+    }
+
+    .controls {
+      margin-top: 22px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 13px;
+      color: #5c636e;
+    }
+
+    button {
+      background: #ffffff;
+      color: #3a3f47;
+      border: 1px solid #cfd4dc;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: #f4f6f9;
+    }
+
+    .hide-labels .note-label,
+    .hide-labels .key-hint {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="piano-body" id="piano">
+    <div class="brand-logo">村人ピアノ</div>
+
+    <div class="keys-container">
+      <!-- 白鍵（15鍵：低いシ〜高いシ） -->
+      <div class="white-key" data-file="低いシ.mp3" data-key="z"><span class="note-label">低シ</span><span
+          class="key-hint">Z</span></div>
+      <div class="white-key" data-file="低いド.mp3" data-key="x"><span class="note-label">低ド</span><span
+          class="key-hint">X</span></div>
+      <div class="white-key" data-file="低いレ.mp3" data-key="c"><span class="note-label">低レ</span><span
+          class="key-hint">C</span></div>
+      <div class="white-key" data-file="低いミ.mp3" data-key="v"><span class="note-label">低ミ</span><span
+          class="key-hint">V</span></div>
+      <div class="white-key" data-file="低いファ.mp3" data-key="b"><span class="note-label">低ファ</span><span
+          class="key-hint">B</span></div>
+      <div class="white-key" data-file="低いソ.mp3" data-key="n"><span class="note-label">低ソ</span><span
+          class="key-hint">N</span></div>
+      <div class="white-key" data-file="低いラ.mp3" data-key="m"><span class="note-label">低ラ</span><span
+          class="key-hint">M</span></div>
+      <div class="white-key" data-file="シ.mp3" data-key="q"><span class="note-label">シ</span><span
+          class="key-hint">Q</span></div>
+      <div class="white-key" data-file="ド.mp3" data-key="w"><span class="note-label">ド</span><span
+          class="key-hint">W</span></div>
+      <div class="white-key" data-file="レ.mp3" data-key="e"><span class="note-label">レ</span><span
+          class="key-hint">E</span></div>
+      <div class="white-key" data-file="ミ.mp3" data-key="r"><span class="note-label">ミ</span><span
+          class="key-hint">R</span></div>
+      <div class="white-key" data-file="ファ.mp3" data-key="t"><span class="note-label">ファ</span><span
+          class="key-hint">T</span></div>
+      <div class="white-key" data-file="ソ.mp3" data-key="y"><span class="note-label">ソ</span><span
+          class="key-hint">Y</span></div>
+      <div class="white-key" data-file="ラ.mp3" data-key="u"><span class="note-label">ラ</span><span
+          class="key-hint">U</span></div>
+
+
+      <!-- 黒鍵（11鍵：低いシ♭〜高いラ＃） -->
+      <div class="black-key bk-0" data-file="低いシ♭.mp3" data-key="a"><span class="note-label">シ♭</span><span
+          class="key-hint">A</span></div>
+      <div class="black-key bk-1" data-file="低いド＃.mp3" data-key="d"><span class="note-label">ド＃</span><span
+          class="key-hint">D</span></div>
+      <div class="black-key bk-2" data-file="低いミ♭.mp3" data-key="f"><span class="note-label">ミ♭</span><span
+          class="key-hint">F</span></div>
+      <div class="black-key bk-3" data-file="低いファ＃.mp3" data-key="h"><span class="note-label">ファ＃</span><span
+          class="key-hint">H</span></div>
+      <div class="black-key bk-4" data-file="低いソ＃.mp3" data-key="j"><span class="note-label">ソ＃</span><span
+          class="key-hint">J</span></div>
+      <div class="black-key bk-5" data-file="シ♭.mp3" data-key="k"><span class="note-label">ラ＃</span><span
+          class="key-hint">K</span></div>
+      <div class="black-key bk-6" data-file="ド＃.mp3" data-key="3"><span class="note-label">ド＃</span><span
+          class="key-hint">3</span></div>
+      <div class="black-key bk-7" data-file="レ＃.mp3" data-key="4"><span class="note-label">ミ♭</span><span
+          class="key-hint">4</span></div>
+      <div class="black-key bk-8" data-file="ファ＃.mp3" data-key="6"><span class="note-label">ファ＃</span><span
+          class="key-hint">6</span></div>
+      <div class="black-key bk-9" data-file="ソ＃.mp3" data-key="7"><span class="note-label">ソ＃</span><span
+          class="key-hint">7</span></div>
+      <div class="black-key bk-10" data-file="高いシ.mp3" data-key="i"><span class="note-label">高シ♭</span><span
+          class="key-hint">I</span></div>
+
+    </div>
+  </div>
+
+  <div class="controls">
+    <button onclick="document.getElementById('piano').classList.toggle('hide-labels')">音名ガイド表示切替</button>
+  </div>
+
+  <script>
+    const allKeys = document.querySelectorAll('.white-key, .black-key');
+    const keyMap = {};
+
+    // 鍵盤要素の初期化とクリック設定
+    allKeys.forEach(keyEl => {
+      const keyboardKey = keyEl.getAttribute('data-key');
+      if (keyboardKey) {
+        keyMap[keyboardKey] = keyEl;
+      }
+
+      keyEl.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); // 黒鍵を押した時に下の白鍵が反応するのを防ぐ
+        triggerNote(keyEl);
+      });
+    });
+
+    // 音を鳴らし、鍵盤を沈ませる処理
+    function triggerNote(keyEl) {
+      const fileName = keyEl.getAttribute('data-file');
+      if (!fileName) return;
+
+      const audio = new Audio(fileName);
+      audio.currentTime = 0;
+      audio.play().catch(err => {
+        console.warn(`音声ファイルが見つかりません: ${fileName}`);
+      });
+
+      keyEl.classList.add('active');
+      setTimeout(() => {
+        keyEl.classList.remove('active');
+      }, 160);
+    }
+
+    // パソコンのキーボード入力対応
+    document.addEventListener('keydown', (event) => {
+      if (event.repeat) return;
+      const targetKey = keyMap[event.key.toLowerCase()];
+      if (targetKey) {
+        triggerNote(targetKey);
+      }
+    });
+  </script>
+</body>
+
+</html>
