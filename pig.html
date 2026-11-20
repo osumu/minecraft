@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豚シリーズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body
+    class="bg-neutral-50 text-neutral-900 min-h-screen flex flex-col antialiased selection:bg-neutral-900 selection:text-white">
+    <header class="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-neutral-200/80">
+        <div
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-auto sm:h-16 py-3 sm:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <a href="#" class="text-lg font-semibold tracking-tight text-neutral-900 shrink-0">豚シリーズ</a>
+
+            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                <div class="relative flex-1 sm:w-60">
+                    <i data-lucide="search"
+                        class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"></i>
+                    <input type="text" id="searchInput" placeholder="タイトルを検索..."
+                        class="w-full pl-9 pr-8 py-1.5 rounded-lg bg-neutral-100 border border-transparent focus:border-neutral-300 focus:bg-white text-sm outline-none transition placeholder:text-neutral-400">
+                    <button id="clearSearchBtn" aria-label="検索をクリア"
+                        class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center bg-neutral-100 p-1 rounded-lg shrink-0" role="tablist">
+                    <button data-filter="all"
+                        class="filter-tab px-3 py-1 rounded-md text-xs font-medium transition-all bg-white text-neutral-900 shadow-sm">すべて</button>
+                    <button data-filter="video"
+                        class="filter-tab px-3 py-1 rounded-md text-xs font-medium transition-all text-neutral-500 hover:text-neutral-900">動画</button>
+                    <button data-filter="image"
+                        class="filter-tab px-3 py-1 rounded-md text-xs font-medium transition-all text-neutral-500 hover:text-neutral-900">画像</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        <div id="mediaGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-8"></div>
+
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-24 text-center">
+            <p class="text-sm text-neutral-500 mb-4">一致するメディアが見つかりませんでした</p>
+            <button id="resetFilterBtn"
+                class="px-4 py-2 rounded-lg bg-neutral-900 text-white text-xs font-medium hover:bg-neutral-800 transition">表示をリセット</button>
+        </div>
+    </main>
+
+    <div id="lightboxModal"
+        class="hidden fixed inset-0 z-50 bg-neutral-950/90 backdrop-blur-sm flex flex-col justify-between opacity-0 transition-opacity duration-200"
+        role="dialog" aria-modal="true">
+        <div class="flex items-center justify-end px-4 sm:px-6 py-4">
+            <button id="closeModalBtn" aria-label="閉じる"
+                class="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div id="modalBackdrop"
+            class="relative flex-1 flex items-center justify-center px-4 sm:px-16 overflow-hidden select-none">
+            <button id="prevBtn" aria-label="前へ"
+                class="absolute left-3 sm:left-6 z-20 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+
+            <div id="modalMediaContainer" class="max-w-5xl max-h-[75vh] w-full flex items-center justify-center"></div>
+
+            <button id="nextBtn" aria-label="次へ"
+                class="absolute right-3 sm:right-6 z-20 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
+                <i data-lucide="chevron-right" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <div class="px-4 sm:px-6 py-5 text-center">
+            <h2 id="modalTitle" class="text-sm sm:text-base font-medium text-white/95 truncate max-w-2xl mx-auto"></h2>
+        </div>
+    </div>
+
+    <script>
+        const mediaItems = [
+            {
+                id: 'media-1',
+                type: 'video',
+                title: '豚肉その１',
+                src: 'pork1.mp4'
+            },
+            {
+                id: 'media-2',
+                type: 'video',
+                title: '豚肉その２',
+                src: 'pork2.mp4'
+            },
+            {
+                id: 'media-3',
+                type: 'video',
+                title: '豚肉その３',
+                src: 'pork3.mp4'
+            },
+            {
+                id: 'media-4',
+                type: 'video',
+                title: '「豚肉！豚肉！」',
+                src: 'pig1.mp4'
+            },
+            {
+                id: 'media-5',
+                type: 'video',
+                title: '豚の大家族',
+                src: 'pig2.mp4'
+            },
+            {
+                id: 'media-6',
+                type: 'video',
+                title: '垂直な壁を上る豚の肉',
+                src: 'pig3.mp4'
+            },
+            {
+                id: 'media-7',
+                type: 'image',
+                title: '吊るされた豚の肉',
+                src: 'pig4.png'
+            },
+            {
+                id: 'media-8',
+                type: 'video',
+                title: '浮遊豚',
+                src: 'pig5.mp4'
+            },
+            {
+                id: 'media-9',
+                type: 'video',
+                title: 'デカ豚',
+                src: 'pig6.mp4'
+            },
+            {
+                id: 'media-10',
+                type: 'video',
+                title: 'デカ豚の続き',
+                src: 'pig7.mp4'
+            },
+            {
+                id: 'media-11',
+                type: 'image',
+                title: '埋もれた豚',
+                src: 'pig8.png'
+            },
+            {
+                id: 'media-12',
+                type: 'video',
+                title: 'ボス豚',
+                src: 'pig9.mp4'
+            },
+            {
+                id: 'media-13',
+                type: 'image',
+                title: '無限',
+                src: "pig10.png"
+            }
+        ];
+
+        let currentFilter = 'all'; // 'all' | 'video' | 'image'
+        let searchQuery = '';
+        let filteredItems = [...mediaItems];
+        let currentModalIndex = -1;
+        const durationCache = new Map();
+
+        const mediaGrid = document.getElementById('mediaGrid');
+        const emptyState = document.getElementById('emptyState');
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const filterTabs = document.querySelectorAll('.filter-tab');
+        const lightboxModal = document.getElementById('lightboxModal');
+        const modalMediaContainer = document.getElementById('modalMediaContainer');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            preloadVideoDurations();
+            renderGallery();
+            setupEventListeners();
+        });
+
+        function formatDuration(seconds) {
+            if (!Number.isFinite(seconds) || seconds < 0) return '--:--';
+            const totalSeconds = Math.floor(seconds);
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function preloadVideoDurations() {
+            mediaItems.forEach((item) => {
+                if (item.type !== 'video') return;
+
+                const tempVideo = document.createElement('video');
+                tempVideo.preload = 'metadata';
+                tempVideo.muted = true;
+                tempVideo.src = item.src;
+
+                const cleanup = () => {
+                    tempVideo.removeAttribute('src');
+                    tempVideo.load();
+                };
+
+                tempVideo.addEventListener('loadedmetadata', () => {
+                    const formatted = formatDuration(tempVideo.duration);
+                    durationCache.set(item.id, formatted);
+                    const badge = document.querySelector(`[data-duration-id="${item.id}"]`);
+                    if (badge) {
+                        badge.textContent = formatted;
+                    }
+                    cleanup();
+                }, {once: true});
+
+                tempVideo.addEventListener('error', () => {
+                    durationCache.set(item.id, '--:--');
+                    cleanup();
+                }, {once: true});
+            });
+        }
+
+        function filterMedia() {
+            const query = searchQuery.trim().toLowerCase();
+            filteredItems = mediaItems.filter(item => {
+                const matchesType = currentFilter === 'all' || item.type === currentFilter;
+                const matchesQuery = !query || item.title.toLowerCase().includes(query);
+                return matchesType && matchesQuery;
+            });
+            renderGallery();
+        }
+
+        function renderGallery() {
+            mediaGrid.innerHTML = '';
+
+            if (filteredItems.length === 0) {
+                mediaGrid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            mediaGrid.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            filteredItems.forEach((item, index) => {
+                const isVideo = item.type === 'video';
+                const cachedDuration = durationCache.get(item.id) || '--:--';
+
+                const card = document.createElement('article');
+                card.className = 'group cursor-pointer flex flex-col';
+                card.onclick = () => openModal(index);
+
+                if (isVideo) {
+                    card.innerHTML = `
+                        <div class="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-slate-800 via-neutral-900 to-slate-950 border border-neutral-800/80 shadow-sm group-hover:shadow-md group-hover:border-neutral-700 transition-all duration-300 p-4 flex flex-col justify-between select-none">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-semibold tracking-[0.16em] uppercase text-slate-400/90">動画</span>
+                            </div>
+
+                            <div class="flex flex-col items-center justify-center text-center px-2 my-auto transition-transform duration-300 group-hover:scale-[1.02]">
+                                <div class="w-8 h-8 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center text-white/90 mb-2 transition-colors">
+                                    <i data-lucide="play" class="w-3.5 h-3.5 fill-current ml-0.5"></i>
+                                </div>
+                                <p class="text-sm sm:text-[15px] font-medium text-white/95 leading-snug line-clamp-2 tracking-tight">
+                                    ${escapeHtml(item.title)}
+                                </p>
+                            </div>
+
+                            <div class="flex items-center justify-end">
+                                <span data-duration-id="${item.id}" class="px-1.5 py-0.5 rounded bg-white/10 text-slate-200 text-[11px] font-medium tabular-nums tracking-wide">
+                                    ${cachedDuration}
+                                </span>
+                            </div>
+                        </div>
+
+                        <h3 class="mt-2.5 text-sm font-medium text-neutral-800 group-hover:text-neutral-950 line-clamp-1 transition-colors">
+                            ${escapeHtml(item.title)}
+                        </h3>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <div class="relative aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-stone-100 via-neutral-100 to-zinc-200/80 border border-neutral-200/90 shadow-sm group-hover:shadow-md group-hover:border-neutral-300 transition-all duration-300 p-4 flex flex-col justify-between select-none">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-semibold tracking-[0.16em] uppercase text-neutral-400">画像</span>
+                            </div>
+
+                            <div class="flex flex-col items-center justify-center text-center px-2 my-auto transition-transform duration-300 group-hover:scale-[1.02]">
+                                <div class="w-8 h-8 rounded-full bg-neutral-900/5 group-hover:bg-neutral-900/10 flex items-center justify-center text-neutral-600 mb-2 transition-colors">
+                                    <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                                </div>
+                                <p class="text-sm sm:text-[15px] font-medium text-neutral-800 leading-snug line-clamp-2 tracking-tight">
+                                    ${escapeHtml(item.title)}
+                                </p>
+                            </div>
+                            <div class="h-4"></div>
+                        </div>
+
+                        <h3 class="mt-2.5 text-sm font-medium text-neutral-800 group-hover:text-neutral-950 line-clamp-1 transition-colors">
+                            ${escapeHtml(item.title)}
+                        </h3>
+                    `;
+                }
+
+                mediaGrid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        function openModal(index) {
+            currentModalIndex = index;
+            updateModalContent();
+
+            lightboxModal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                lightboxModal.classList.remove('opacity-0');
+            });
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const activeVideo = modalMediaContainer.querySelector('video');
+            if (activeVideo) {
+                activeVideo.pause();
+                activeVideo.src = '';
+            }
+
+            lightboxModal.classList.add('opacity-0');
+            setTimeout(() => {
+                lightboxModal.classList.add('hidden');
+                modalMediaContainer.innerHTML = '';
+                document.body.style.overflow = '';
+            }, 200);
+            currentModalIndex = -1;
+        }
+
+        function updateModalContent() {
+            const item = filteredItems[currentModalIndex];
+            if (!item) return;
+
+            document.getElementById('modalTitle').textContent = item.title;
+            modalMediaContainer.innerHTML = '';
+
+            if (item.type === 'video') {
+                const video = document.createElement('video');
+                video.src = item.src;
+                video.controls = true;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.className = 'max-h-[75vh] max-w-full rounded-lg shadow-2xl bg-black outline-none';
+                modalMediaContainer.appendChild(video);
+            } else {
+                const img = document.createElement('img');
+                img.src = item.src;
+                img.alt = item.title;
+                img.onerror = () => {
+                    img.onerror = null;
+                    img.src = `https://placehold.co/1200x675/171717/a3a3a3?text=${encodeURIComponent(item.title)}`;
+                };
+                img.className = 'max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl select-none';
+                modalMediaContainer.appendChild(img);
+            }
+
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const showNav = filteredItems.length > 1;
+            prevBtn.classList.toggle('hidden', !showNav);
+            nextBtn.classList.toggle('hidden', !showNav);
+        }
+
+        function navigateModal(direction) {
+            if (filteredItems.length <= 1) return;
+            currentModalIndex = (currentModalIndex + direction + filteredItems.length) % filteredItems.length;
+            updateModalContent();
+        }
+
+        function setActiveFilter(filter) {
+            currentFilter = filter;
+            filterTabs.forEach(tab => {
+                if (tab.dataset.filter === filter) {
+                    tab.className = 'filter-tab px-3 py-1 rounded-md text-xs font-medium transition-all bg-white text-neutral-900 shadow-sm';
+                } else {
+                    tab.className = 'filter-tab px-3 py-1 rounded-md text-xs font-medium transition-all text-neutral-500 hover:text-neutral-900';
+                }
+            });
+            filterMedia();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function setupEventListeners() {
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                clearSearchBtn.classList.toggle('hidden', !searchQuery);
+                filterMedia();
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                searchQuery = '';
+                clearSearchBtn.classList.add('hidden');
+                filterMedia();
+            });
+
+            document.getElementById('resetFilterBtn').addEventListener('click', () => {
+                searchInput.value = '';
+                searchQuery = '';
+                clearSearchBtn.classList.add('hidden');
+                setActiveFilter('all');
+            });
+
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', () => setActiveFilter(tab.dataset.filter));
+            });
+
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+                if (e.target.id === 'modalBackdrop') closeModal();
+            });
+
+            document.getElementById('prevBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateModal(-1);
+            });
+            document.getElementById('nextBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateModal(1);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (lightboxModal.classList.contains('hidden')) return;
+                if (e.key === 'Escape') closeModal();
+                if (e.key === 'ArrowLeft') navigateModal(-1);
+                if (e.key === 'ArrowRight') navigateModal(1);
+            });
+
+            let touchStartX = 0;
+            lightboxModal.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            lightboxModal.addEventListener('touchend', (e) => {
+                const diff = touchStartX - e.changedTouches[0].screenX;
+                if (Math.abs(diff) > 50) {
+                    navigateModal(diff > 0 ? 1 : -1);
+                }
+            }, {passive: true});
+        }
+    </script>
+</body>
+
+</html>
